@@ -1,10 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import '../style.css'
 
 interface Props {
-    data: any[]
+    wsurl: string
+    startWs: boolean
 } 
-const CardVideo = ({ data }: Props) => {
+const CardVideo = ({ wsurl, startWs }: Props) => {
+  const [data, setData] = useState<string>('')
+  const [wsInstances, setWsInstances] = useState<WebSocket>()
   
   const canvasRef = useRef(null);
   
@@ -12,6 +15,39 @@ const CardVideo = ({ data }: Props) => {
     const rate = 6
     const width = 1920 / rate;
     const height = 1080 / rate;
+
+    
+    const startWebSocket = () => {
+      const ws = new WebSocket(wsurl)
+      setWsInstances(ws)
+      ws.addEventListener("open", (e)=>{
+        console.log("Web Socket Connected", e)
+      })
+      
+      ws.addEventListener("message", (e)=>{
+        setData(e.data)
+      })
+  
+      ws.addEventListener("close", () => {
+        console.log("Web Socket Closed")
+      })
+    }
+
+    const stopWebSocket = () => {
+      wsInstances?.close()
+    }
+
+    useEffect(()=>{
+      if (startWs) {
+        startWebSocket()
+      } else {
+        stopWebSocket()
+      }
+
+      return () => {
+        stopWebSocket()
+      }
+    }, [startWs])
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -25,16 +61,16 @@ const CardVideo = ({ data }: Props) => {
     image.onload = () => {
       canvas.width = width;
       canvas.height = height;
-      context.drawImage(image, 0, 0);
+      context.drawImage(image, 0, 0, width, height);
     };
     
-    // image.src = based64broh
-    image.src = 'data:image/jpeg;base64,' + data[data?.length - 1]?.imageBase64;
+    // image.src = 'data:image/jpeg;base64,' + data[data?.length - 1]?.imageBase64;
+    image.src = 'data:image/jpeg;base64,' + data;
   }, [data]);
     
     return (
     <>
-      <div className="cardvideo">
+      <div className="cardvideo" style={{ width: width, height: height, borderStyle: 'solid' }}>
           <canvas ref={canvasRef} className='canvas' />
       </div>
     </>
